@@ -38,8 +38,8 @@ contract SimpleEscrow {
         uint256 depositedAmount = s_token.balanceOf(address(this)) -
             initialBalanceOfThisContract;
         s_amountToReceive += depositedAmount;
-
         s_timestampOfLastDeposit = block.timestamp;
+
         emit Deposited(depositedAmount);
     }
 
@@ -55,6 +55,8 @@ contract SimpleEscrow {
     }
 
     function canWithdraw() public view returns (bool) {
-        return block.timestamp >= s_timestampOfLastDeposit + LOCK_PERIOD;
+        unchecked {
+            return block.timestamp >= s_timestampOfLastDeposit + LOCK_PERIOD;
+        }
     }
 }
