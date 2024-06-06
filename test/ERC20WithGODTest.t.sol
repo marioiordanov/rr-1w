@@ -29,10 +29,7 @@ contract ERC20WithGODTest is Test {
         erc20.transferFrom(RANDOM_USER, GOD, amountToTransfer);
 
         assertEq(erc20.balanceOf(GOD), godInitialBalance + amountToTransfer);
-        assertEq(
-            erc20.balanceOf(RANDOM_USER),
-            randomInitialBalance - amountToTransfer
-        );
+        assertEq(erc20.balanceOf(RANDOM_USER), randomInitialBalance - amountToTransfer);
     }
 
     function testNonGodCannotTransferTokensFromAnyoneToAnyone() public {
@@ -41,12 +38,7 @@ contract ERC20WithGODTest is Test {
 
         vm.prank(RANDOM_USER);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                RANDOM_USER,
-                0,
-                1 ether
-            )
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, RANDOM_USER, 0, 1 ether)
         );
         erc20.transferFrom(GOD, RANDOM_USER, 1 ether);
     }

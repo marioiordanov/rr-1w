@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.20;
+
 import {ERC20} from "@openzeppelin/contracts@v5.0.2/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts@v5.0.2/access/Ownable.sol";
 
@@ -13,11 +14,7 @@ contract ERC20WithGOD is ERC20, Ownable {
     // state vars
     address private immutable s_god;
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        address god
-    ) ERC20(name, symbol) Ownable(msg.sender) {
+    constructor(string memory name, string memory symbol, address god) ERC20(name, symbol) Ownable(msg.sender) {
         s_god = god;
         _mint(owner(), INITIAL_OWNER_BALANCE);
     }
@@ -26,11 +23,7 @@ contract ERC20WithGOD is ERC20, Ownable {
         _mint(account, amount);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) public override returns (bool) {
+    function transferFrom(address from, address to, uint256 value) public override returns (bool) {
         if (msg.sender != s_god) {
             _spendAllowance(from, msg.sender, value);
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.20;
+
 import {ERC20} from "@openzeppelin/contracts@v5.0.2/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts@v5.0.2/access/Ownable.sol";
 
@@ -21,10 +22,7 @@ contract ERC20WithSanctions is ERC20, Ownable {
     error SanctionedSender();
     error SanctionedReceiver();
 
-    constructor(
-        string memory name,
-        string memory symbol
-    ) ERC20(name, symbol) Ownable(msg.sender) {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) Ownable(msg.sender) {
         _mint(owner(), INITIAL_OWNER_BALANCE);
     }
 
@@ -42,10 +40,7 @@ contract ERC20WithSanctions is ERC20, Ownable {
         _mint(account, amount);
     }
 
-    function transfer(
-        address to,
-        uint256 value
-    ) public override returns (bool) {
+    function transfer(address to, uint256 value) public override returns (bool) {
         address msgSender = _msgSender();
         if (isAddressSanctioned(msgSender)) {
             revert SanctionedSender();
@@ -59,11 +54,7 @@ contract ERC20WithSanctions is ERC20, Ownable {
         return true;
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) public override returns (bool) {
+    function transferFrom(address from, address to, uint256 value) public override returns (bool) {
         if (isAddressSanctioned(from)) {
             revert SanctionedSender();
         }

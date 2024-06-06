@@ -52,19 +52,13 @@ contract ERC20WithSanctionsTest is Test {
         assertEq(erc20.isAddressSanctioned(SANCTIONED), true);
     }
 
-    function testSanctionedUserCantReceiveTokensViaTransfer()
-        public
-        withSaction
-    {
+    function testSanctionedUserCantReceiveTokensViaTransfer() public withSaction {
         vm.prank(RANDOM_USER);
         vm.expectRevert(ERC20WithSanctions.SanctionedReceiver.selector);
         erc20.transfer(SANCTIONED, 1 ether);
     }
 
-    function testSanctionedUserCantReceiveTokensViaTransferFrom()
-        public
-        withSaction
-    {
+    function testSanctionedUserCantReceiveTokensViaTransferFrom() public withSaction {
         vm.prank(OWNER);
         erc20.approve(RANDOM_USER, type(uint256).max);
 
