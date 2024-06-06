@@ -47,13 +47,11 @@ contract ERC20WithBondingCurve is ERC20 {
         uint256 minimumWeiReturned
     ) external returns (uint256) {
         uint256 currentTotalWei = _getPriceForAmountOfTokensInWei(
-            totalSupply(),
-            false
+            totalSupply()
         );
 
         uint256 totalWeiAfterBurn = _getPriceForAmountOfTokensInWei(
-            totalSupply() - tokenAmount,
-            false
+            totalSupply() - tokenAmount
         );
 
         uint256 weiReturned = currentTotalWei - totalWeiAfterBurn;
@@ -71,22 +69,18 @@ contract ERC20WithBondingCurve is ERC20 {
     }
 
     function getCurrentPrice() public view returns (uint256) {
-        return _getPriceForAmountOfTokensInWei(totalSupply(), true);
+        return _getPriceForAmountOfTokensInWei(totalSupply());
     }
 
     function getPriceForAmountOfTokensInWei(
         uint256 tokenAmount
     ) public view returns (uint256) {
         if (totalSupply() == 0) {
-            return
-                _getPriceForAmountOfTokensInWei(
-                    totalSupply() + tokenAmount,
-                    true
-                );
+            return _getPriceForAmountOfTokensInWei(totalSupply() + tokenAmount);
         }
         return
-            _getPriceForAmountOfTokensInWei(totalSupply() + tokenAmount, true) -
-            _getPriceForAmountOfTokensInWei(totalSupply(), true);
+            _getPriceForAmountOfTokensInWei(totalSupply() + tokenAmount) -
+            _getPriceForAmountOfTokensInWei(totalSupply());
     }
 
     function getTokensAmountForWei(
@@ -104,27 +98,17 @@ contract ERC20WithBondingCurve is ERC20 {
     // x - total supply + token amount
     // y - calculated from x
     function _getPriceForAmountOfTokensInWei(
-        uint256 tokensTotalSupply,
-        bool roundUp
+        uint256 tokensTotalSupply
     ) private pure returns (uint256) {
         uint256 x = tokensTotalSupply;
-        if (roundUp) {
-            uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR).ceilDiv(
-                BONDING_CURVE_FUNCTION_DENOMINATOR
+        uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR).ceilDiv(
+            BONDING_CURVE_FUNCTION_DENOMINATOR
+        );
+
+        return
+            (y * (x + 1 * 10 ** decimals())).ceilDiv(
+                (TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals()))
             );
-
-            return
-                (y * (x + 1 * 10 ** decimals())).ceilDiv(
-                    (TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals()))
-                );
-        } else {
-            uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR) /
-                BONDING_CURVE_FUNCTION_DENOMINATOR;
-
-            return
-                (y * (x + 1 * 10 ** decimals())) /
-                ((TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals())));
-        }
     }
 
     // amount of tokens to returns is calculated by the formula:
@@ -135,11 +119,11 @@ contract ERC20WithBondingCurve is ERC20 {
     ) private view returns (uint256) {
         uint256 x = totalSupply();
         uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR) /
-            BONDING_CURVE_FUNCTION_DENOMINATOR;
+            (BONDING_CURVE_FUNCTION_DENOMINATOR);
 
         weiAmount +=
             (y * (x + 1 * 10 ** decimals())) /
-            ((TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals())));
+            (((TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals()))));
 
         uint256 squareRoot = ((B_COEFICIENT +
             ((C_COEFICIENT / SCALING_FACTOR) * weiAmount)) * SCALING_FACTOR)
