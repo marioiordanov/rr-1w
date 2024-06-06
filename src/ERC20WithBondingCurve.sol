@@ -46,17 +46,17 @@ contract ERC20WithBondingCurve is ERC20 {
         uint256 tokenAmount,
         uint256 minimumWeiReturned
     ) external returns (uint256) {
-        uint256 currentPriceOfTokens = _getPriceForAmountOfTokensInWei(
+        uint256 currentTotalWei = _getPriceForAmountOfTokensInWei(
             totalSupply(),
             false
         );
 
-        uint256 priceForTokensAfterBurn = _getPriceForAmountOfTokensInWei(
+        uint256 totalWeiAfterBurn = _getPriceForAmountOfTokensInWei(
             totalSupply() - tokenAmount,
             false
         );
 
-        uint256 weiReturned = currentPriceOfTokens - priceForTokensAfterBurn;
+        uint256 weiReturned = currentTotalWei - totalWeiAfterBurn;
 
         if (weiReturned < minimumWeiReturned) {
             revert NotEnoughWeiReturnedAfterBurn();
@@ -68,10 +68,6 @@ contract ERC20WithBondingCurve is ERC20 {
             revert TransferFailed();
         }
         return weiReturned;
-    }
-
-    function decimals() public pure override returns (uint8) {
-        return 18;
     }
 
     function getCurrentPrice() public view returns (uint256) {
