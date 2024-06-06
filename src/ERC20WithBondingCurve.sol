@@ -10,20 +10,14 @@ import {Math} from "@openzeppelin/contracts@v5.0.2/utils/math/Math.sol";
 /// @notice ERC20 with buying/selling functionality.
 /// @notice The price of the token increases with each mint and decreases with each burn.
 /// @notice Price of token is denominated in wei.
-/// @dev Linear bonding curve function is used: price = 4/3*total_supply
+/// @dev Linear bonding curve function is used: price = total_supply
 contract ERC20WithBondingCurve is ERC20 {
     using Math for uint256;
 
-    uint256 private constant BONDING_CURVE_FUNCTION_NUMERATOR = 4;
-    uint256 private constant BONDING_CURVE_FUNCTION_DENOMINATOR = 3;
     uint256 private constant ETHER_TO_WEI = 1e18;
     uint256 private constant SCALING_FACTOR = 1e18;
 
-    uint256 private constant B_COEFICIENT = 1e18;
-    uint256 private constant A_COEFICIENT = 2e18;
-    uint256 private constant C_COEFICIENT = 6e18;
-
-    uint256 private constant TRIANGLE_FORMULA_DENOMINATOR = 2;
+    uint256 private constant TRIANGLE_AREA_DENOMINATOR = 2;
 
     error NotEnoughTokensMinted();
     error NotEnoughWeiReturnedAfterBurn();
@@ -34,7 +28,16 @@ contract ERC20WithBondingCurve is ERC20 {
     function mint(
         uint256 minimumAmountMinted
     ) external payable returns (uint256) {
-        uint256 newTokensMinted = _getTokensAmountForWei(msg.value);
+        uint256 currentTotalSupply = totalSupply();
+
+        uint256 currentTotalSupplyInWei = _getWeiAmountForTokens(
+            currentTotalSupply
+        );
+
+        uint256 newTokensMinted = _getAmountOfTokensForWei(
+            currentTotalSupplyInWei + msg.value
+        ) - currentTotalSupply;
+
         if (newTokensMinted < minimumAmountMinted) {
             revert NotEnoughTokensMinted();
         }
@@ -46,15 +49,16 @@ contract ERC20WithBondingCurve is ERC20 {
         uint256 tokenAmount,
         uint256 minimumWeiReturned
     ) external returns (uint256) {
-        uint256 currentTotalWei = _getPriceForAmountOfTokensInWei(
-            totalSupply()
+        uint256 currentTotalSupply = totalSupply();
+        uint256 currentTotalSupplyInWei = _getWeiAmountForTokens(
+            currentTotalSupply
+        );
+        uint256 totalSupplyInWeiAfterBurn = _getWeiAmountForTokens(
+            currentTotalSupply - tokenAmount
         );
 
-        uint256 totalWeiAfterBurn = _getPriceForAmountOfTokensInWei(
-            totalSupply() - tokenAmount
-        );
-
-        uint256 weiReturned = currentTotalWei - totalWeiAfterBurn;
+        uint256 weiReturned = currentTotalSupplyInWei -
+            totalSupplyInWeiAfterBurn;
 
         if (weiReturned < minimumWeiReturned) {
             revert NotEnoughWeiReturnedAfterBurn();
@@ -68,70 +72,48 @@ contract ERC20WithBondingCurve is ERC20 {
         return weiReturned;
     }
 
-    function getCurrentPrice() public view returns (uint256) {
-        return _getPriceForAmountOfTokensInWei(totalSupply());
-    }
-
-    function getPriceForAmountOfTokensInWei(
-        uint256 tokenAmount
-    ) public view returns (uint256) {
-        if (totalSupply() == 0) {
-            return _getPriceForAmountOfTokensInWei(totalSupply() + tokenAmount);
-        }
-        return
-            _getPriceForAmountOfTokensInWei(totalSupply() + tokenAmount) -
-            _getPriceForAmountOfTokensInWei(totalSupply());
-    }
-
-    function getTokensAmountForWei(
-        uint256 weiAmount
-    ) public view returns (uint256) {
-        return _getTokensAmountForWei(weiAmount);
-    }
-
     function decimals() public pure override returns (uint8) {
         return 18;
     }
 
-    // Convert tokens to price in wei, regarding token decimals
-    // price = (x.y + y) / 2
-    // x - total supply + token amount
-    // y - calculated from x
-    function _getPriceForAmountOfTokensInWei(
-        uint256 tokensTotalSupply
-    ) private pure returns (uint256) {
-        uint256 x = tokensTotalSupply;
-        uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR).ceilDiv(
-            BONDING_CURVE_FUNCTION_DENOMINATOR
-        );
+    // calculate area of a triangle between curve, origin(0,0) and x, f(x)
+    // area = x * y / 2
+    function _getWeiAmountForTokens(
+        uint256 tokenAmount
+    ) public pure returns (uint256) {
+        uint256 x = tokenAmount;
+        uint256 y = x;
 
         return
-            (y * (x + 1 * 10 ** decimals())).ceilDiv(
-                (TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals()))
+            _convertTokensToWei(
+                (x * y) / TRIANGLE_AREA_DENOMINATOR / 10 ** decimals()
             );
     }
 
-    // amount of tokens to returns is calculated by the formula:
-    // derived from square root formula, for positive root only
-    // tokens = (-1 + sqrt( 1 + 6 * wei amount)) / 2
-    function _getTokensAmountForWei(
+    // derived from formula for tokens -> wei:
+    // price = x * f(x) / 2 => x * f(x) = price * w
+    // f(x) = x => x^2 = price * 2 => x = sqrt(price * 2)
+    function _getAmountOfTokensForWei(
         uint256 weiAmount
-    ) private view returns (uint256) {
-        uint256 x = totalSupply();
-        uint256 y = (x * BONDING_CURVE_FUNCTION_NUMERATOR) /
-            (BONDING_CURVE_FUNCTION_DENOMINATOR);
+    ) public pure returns (uint256) {
+        uint256 newTokens = (TRIANGLE_AREA_DENOMINATOR *
+            weiAmount *
+            SCALING_FACTOR).sqrt();
+        return _convertWeiToTokens(newTokens);
+    }
 
-        weiAmount +=
-            (y * (x + 1 * 10 ** decimals())) /
-            (((TRIANGLE_FORMULA_DENOMINATOR * (10 ** decimals()))));
+    // converting tokens unit to wei unit
+    function _convertTokensToWei(
+        uint256 tokenAmount
+    ) private pure returns (uint256) {
+        return (tokenAmount * ETHER_TO_WEI) / 10 ** decimals();
+    }
 
-        uint256 squareRoot = ((B_COEFICIENT +
-            ((C_COEFICIENT / SCALING_FACTOR) * weiAmount)) * SCALING_FACTOR)
-            .sqrt();
-
-        uint256 updatedTotalSupply = ((squareRoot - B_COEFICIENT) *
-            10 ** decimals()) / A_COEFICIENT;
-
-        return updatedTotalSupply - totalSupply();
+    // f(x) = x
+    // converting wei unit to token unit
+    function _convertWeiToTokens(
+        uint256 weiAmount
+    ) private pure returns (uint256) {
+        return (weiAmount * 10 ** decimals()) / ETHER_TO_WEI;
     }
 }

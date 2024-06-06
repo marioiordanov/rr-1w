@@ -22,7 +22,10 @@ contract ERC20WithSanctions is ERC20, Ownable {
     error SanctionedSender();
     error SanctionedReceiver();
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) Ownable(msg.sender) {
+    constructor(
+        string memory name,
+        string memory symbol
+    ) ERC20(name, symbol) Ownable(msg.sender) {
         _mint(owner(), INITIAL_OWNER_BALANCE);
     }
 
@@ -40,9 +43,11 @@ contract ERC20WithSanctions is ERC20, Ownable {
         _mint(account, amount);
     }
 
-    function transfer(address to, uint256 value) public override returns (bool) {
-        address msgSender = _msgSender();
-        if (isAddressSanctioned(msgSender)) {
+    function transfer(
+        address to,
+        uint256 value
+    ) public override returns (bool) {
+        if (isAddressSanctioned(msg.sender)) {
             revert SanctionedSender();
         }
 
@@ -50,11 +55,15 @@ contract ERC20WithSanctions is ERC20, Ownable {
             revert SanctionedReceiver();
         }
 
-        super._transfer(msgSender, to, value);
+        super._transfer(msg.sender, to, value);
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 value) public override returns (bool) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) public override returns (bool) {
         if (isAddressSanctioned(from)) {
             revert SanctionedSender();
         }
