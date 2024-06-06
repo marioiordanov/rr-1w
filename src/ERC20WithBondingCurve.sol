@@ -95,6 +95,10 @@ contract ERC20WithBondingCurve is ERC20 {
         return _getTokensAmountForWei(weiAmount);
     }
 
+    function decimals() public pure override returns (uint8) {
+        return 18;
+    }
+
     // Convert tokens to price in wei, regarding token decimals
     // price = (x.y + y) / 2
     // x - total supply + token amount
